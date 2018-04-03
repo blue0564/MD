@@ -1,0 +1,42 @@
+
+*** Performance analysis for segment for c=1 ***
+
+    EVAL TIME =    599.93 secs
+  EVAL SPEECH =    593.04 secs ( 98.9 percent of evaluated time)
+  SCORED TIME =    593.50 secs ( 98.9 percent of evaluated time)
+SCORED SPEECH =    586.79 secs ( 98.9 percent of scored time)
+   EVAL WORDS =      0        
+ SCORED WORDS =      0         (100.0 percent of evaluated words)
+---------------------------------------------
+MISSED SPEECH =      8.87 secs (  1.5 percent of scored time)
+FALARM SPEECH =      2.53 secs (  0.4 percent of scored time)
+ MISSED WORDS =      0         (100.0 percent of scored words)
+---------------------------------------------
+SCORED SEGMENT TIME =    586.79 secs (100.0 percent of scored speech)
+MISSED SEGMENT TIME =      8.87 secs (  1.5 percent of scored speaker time)
+FALARM SEGMENT TIME =      2.53 secs (  0.4 percent of scored speaker time)
+ SEGMENT ERROR TIME =    290.58 secs ( 49.5 percent of scored speaker time)
+SEGMENT ERROR WORDS =      0         (100.0 percent of scored speaker words)
+---------------------------------------------
+ OVERALL SEGMENT ERROR RATE = 51.46 percent of scored speaker time  `(c=1)
+
+*** Performance analysis for segment for ALL ***
+
+    EVAL TIME =    599.93 secs
+  EVAL SPEECH =    593.04 secs ( 98.9 percent of evaluated time)
+  SCORED TIME =    593.50 secs ( 98.9 percent of evaluated time)
+SCORED SPEECH =    586.79 secs ( 98.9 percent of scored time)
+   EVAL WORDS =      0        
+ SCORED WORDS =      0         (100.0 percent of evaluated words)
+---------------------------------------------
+MISSED SPEECH =      8.87 secs (  1.5 percent of scored time)
+FALARM SPEECH =      2.53 secs (  0.4 percent of scored time)
+ MISSED WORDS =      0         (100.0 percent of scored words)
+---------------------------------------------
+SCORED SEGMENT TIME =    586.79 secs (100.0 percent of scored speech)
+MISSED SEGMENT TIME =      8.87 secs (  1.5 percent of scored speaker time)
+FALARM SEGMENT TIME =      2.53 secs (  0.4 percent of scored speaker time)
+ SEGMENT ERROR TIME =    290.58 secs ( 49.5 percent of scored speaker time)
+SEGMENT ERROR WORDS =      0         (100.0 percent of scored speaker words)
+---------------------------------------------
+ OVERALL SEGMENT ERROR RATE = 51.46 percent of scored speaker time  `(ALL)

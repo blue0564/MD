@@ -1,0 +1,34 @@
+#!/usr/bin/env perl
+
+if ($#ARGV == -1){
+  die "no input file\n";
+}
+
+$segment=$ARGV[0];
+$classification=$ARGV[1];
+$outfile=$ARGV[2];
+
+open(SEG, "<$segment") || die "Error!\n";
+open(CLASSIFICATION, "<$classification") || die "Error!\n";
+open(OUTPUT, ">$outfile") || die "Error!\n";
+
+@seg_begin = <SEG>;
+@cl_seg = <CLASSIFICATION>;
+
+$i=0;
+foreach $line (@cl_seg) {
+  @slh = $line =~ /\d{1}/g;
+  @fn = $line =~ /^([a-zA-Z][0-9a-zA-Z]{2,8})/;
+  $file_name[$i]="$fn[0]";
+  $framen[$i]=$#slh+1;
+  $l=0;
+  while($l<$#slh+1){
+    $splh[$i][$l]=$slh[$l];
+    $l++;
+  }
+  $i++;
+}
+
+close(SEG);
+close(CLASSIFICATION);
+close(OUTPUT);
