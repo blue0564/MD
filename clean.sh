@@ -18,6 +18,8 @@ rm -rf $resultFolder
 echo "Delete the Result folder"
 rm -rf $mfcc
 echo "Delete the mfcc feature folder"
+rm -rf spec
+echo "Delete the spectrogram feature folder"
 rm -rf $data
 echo "Delete the data folder"
 rm -rf $model
