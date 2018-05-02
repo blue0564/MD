@@ -53,7 +53,7 @@ close(FILE);
 
 $classNum=(@{$matrix[0]}/3)-1;
 #print "classNum is ".$classNum."\n";
-#print "matrix is ".$matrix[0][0]."||".$matrix[0][3]."\n";
+#print "matrix is ".$matrix[0][12]."||".$matrix[0][13]."\n";
 #print "matrix size is ".@{$matrix[0]}."\n";
 
 open(WFILE, ">$out_file") || die "praat2rttm.pl, Error! open output\n";
@@ -68,11 +68,13 @@ $noInd=0;
 $seInd=0;
 
 #@list=($matrix[$spInd][0], $matrix[$spInd][1], $matrix[$muInd][3],	$matrix[$muInd][4], $matrix[$seInd][6], $matrix[$seInd][7], $matrix[$noInd][9], $matrix[$noInd][10]);
+#print "classNum is ".$classNum."\n";
 push(@list,$matrix[0][3*$_],$matrix[0][3*$_+1]) foreach(0...$classNum);	# fixed by hwh at 17.11.02.1951
-#print "list is ".$list[0]."||".$list[3]."\n";
-#print "list empty? ".($list[3]=="blank")."\n";
+#print $_."\n" foreach(@list);
+#print "list is ".$list[8]."||".$list[9]."\n";
+#print "list empty? ".($list[8] eq "blank")."\n";
 #print "list size is ".$#list."\n";
- foreach(0...$#list){if($list[$_]=="blank"){ $list[$_]=$maxVal[0]+1;;}}	# fixed by hwh at 17.11.02.2003
+foreach(0...$#list){if($list[$_] eq "blank"){ $list[$_]=$maxVal[0]+1;;}}	# fixed by hwh at 17.11.02.2003
 
 #print "starting list variation \n";
 #print $_."\n" foreach(@list);
@@ -140,7 +142,7 @@ sub getMin{
   my $min=$_[0];
   my $minPos=0;
   for (my $i=1; $i <= $#_; $i++){
-    if($_[$i]<$min){$min=$_[$i]; $minPos=$i;}
+    if($_[$i]<=$min){$min=$_[$i]; $minPos=$i;}
   }
   return $min,$minPos;
 }
@@ -218,6 +220,7 @@ sub searchInterval{
   #print "++++++++++++++++++++++\n";
 
   @min=getMin(@list); 
+  #print "min is".$min."\n";
   if($min[0]<$cur){ $list[$min[1]]=$cur;}
   elsif($min[0]>$cur){ $cur=$list[$min[1]];}
   #print $#list."\n";
@@ -233,7 +236,7 @@ sub searchInterval{
     if(grep {$_ eq $min[1]} @even){ $list[$min[1]]=inf;};
     #print "min value is ".$min[1]."\n";
     
-     #print "write variation is ".$write."\n";    
+    #print "write variation is ".$write."\n";    
     # write
     if($time[0] ne $time[1]){ $write=$write+1;}
 
