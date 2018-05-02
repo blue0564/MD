@@ -1,5 +1,8 @@
 #!/usr/bin/env perl
 #version 17.10.31.1530
+# modified in 2018.05.02 by WoonHaeng, Heo
+# line '78': $list[$_] == "blank"  ->  $list[$_] eq "blank"
+# 
 
 if ($#ARGV == -1){
   die "praat2rttm.pl, no input file\n";
@@ -72,7 +75,7 @@ push(@list,$matrix[0][3*$_],$matrix[0][3*$_+1]) foreach(0...$classNum);	# fixed 
 #print "list is ".$list[0]."||".$list[3]."\n";
 #print "list empty? ".($list[3]=="blank")."\n";
 #print "list size is ".$#list."\n";
- foreach(0...$#list){if($list[$_]=="blank"){ $list[$_]=$maxVal[0]+1;;}}	# fixed by hwh at 17.11.02.2003
+ foreach(0...$#list){if($list[$_] eq "blank"){ $list[$_]=$maxVal[0]+1;;}}	# fixed by hwh at 17.11.02.2003
 
 #print "starting list variation \n";
 #print $_."\n" foreach(@list);
