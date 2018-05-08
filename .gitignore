@@ -9,6 +9,11 @@ exp/
 
 # temporal data directory
 data/
+vad/
+.idea/
+
 
 # temporal python files
 *.pyc
+
+
