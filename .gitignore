@@ -9,8 +9,12 @@ exp/
 
 # temporal data directory
 data/
+
 vad/
+
 .idea/
+
+deeputils/
 
 
 # temporal python files
