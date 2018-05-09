@@ -35,18 +35,13 @@
 
 """
 
-import pickle
 import os
 import sys
 from optparse import OptionParser
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy
-import webrtcvad
 from numpy import matlib
-from scipy import signal
-from scipy.io import wavfile
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from deeputils.deepio import array_io
@@ -221,7 +216,7 @@ def main():
         print 'LOG: output spec file and pos file'
 
     begi = 0
-    endi = begi + splice_size*2
+    endi = begi + splice_size*2 + 1
     while endi < vad_data_pad.shape[0]:
         speci = spec_data_zm_pad[:,begi:endi]
         posi = array_io.save_append_array(spec_file,speci)
@@ -232,7 +227,7 @@ def main():
             f.write("%i %s\n"%(posi,labeli))
 
         begi += spec_stride
-        endi = begi + splice_size*2
+        endi = begi + splice_size*2 + 1
 
     if log_level > 1:
         plt.show()

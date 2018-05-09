@@ -38,8 +38,8 @@ if [ $stage -le 0 ]; then
   mkdir -p $featdir
   conf=conf/spec_data.conf  
   cnn/make_spec_data.sh $conf data/musan_speech $featdir/spec_data.npy $featdir/spec_data.pos "speech" 
-  cnn/make_spec_data.sh $conf data/musan_music $featdir  "music" ${exp_dir}/feats.log
-  cnn/make_spec_data.sh $conf data/musan_noise $featdir  "noise" ${exp_dir}/feats.log
+  cnn/make_spec_data.sh $conf data/musan_music $featdir/spec_data.npy $featdir/spec_data.pos "music"
+  cnn/make_spec_data.sh $conf data/musan_noise $featdir/spec_data.npy $featdir/spec_data.pos "noise"
 #  local/make_spec.sh $conf data/musan $featdir
 #  find ${featdir} -name "*.bin" > ${exp_dir}/feats.scp
 
@@ -50,11 +50,11 @@ if [ $stage -le -1 ]; then
   rm -rf ${mdldir}
   mkdir -p ${mdldir}
   class_conf=conf/class_map_for_cnn.conf
-  python tfdeep/trainCNN_rand.py --num-epoch 10 --minibatch 500 \
+  python cnn/trainCNN_rand.py --num-epoch 10 --minibatch 500 \
 				--keep-prob 0.6 --val-iter 100 --save-iter 1000 \
 				--val-rate 5 --shuff-epoch 100 --lr 0.0001 \
 				--active-function relu \
-				${exp_dir}/egs/all_spec.npy ${exp_dir}/egs/all_spec.pnt ${class_conf} ${mdldir} ${mdldir}/train.log
+				${exp_dir}/egs/spec_data.npy ${exp_dir}/egs/spec_data.pos ${class_conf} ${mdldir} ${mdldir}/train.log
 
 fi
 
