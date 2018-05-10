@@ -9,7 +9,7 @@ set -e
 
 expdir=exp/cnn_full_data
 dnnmdl=exp/cnn_full_data/1
-stage=0
+stage=1
 nj=1
 
 wavdir=/Databases/MusicDetection/MD-test/wav
@@ -64,9 +64,20 @@ if [ $stage -le 0 ]; then
 
 
   done 
+fi
 
+if [ $stage -le 1 ]; then
+  [[ ! -d ${decdir} ]] && echo "ERROR: not exist decode directory" && exit 1;
+  find ${decdir} -iname "*.npy" > ${decdir}/dec_data.scp
 
+  cat ${decdir}/dec_data.scp | head -n 1 |
+  while read datfile
+  do
+    filename=$(basename $datfile .wav)
+    posfile=$(echo ${datfile} | sed 's#\.npy#.pos#g')
+    python cnn/dnn_base/predCNN_rand.py --checkpoint 100 --out-predlab $decdir/tmp.lab ${datfile} ${posfile} ${dnnmdl}
 
+  done 
 fi
 
 : << 'END'
