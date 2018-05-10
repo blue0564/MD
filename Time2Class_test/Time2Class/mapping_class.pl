@@ -59,9 +59,8 @@ foreach (@data) {
   if($start==0){ $preStart=$nowStart; $preDur=$nowDur; $preEnd=$nowEnd; $preFile=$nowFile; $preClass=$nowClass; }
 
   $start=1;
-
 }
-
+print WFILE "$str[0] $preFile $str[2] $preStart $preDur $str[5] $str[6] $preClass $str[8] $str[9]";
 
 close(FILE);
 close(WFILE);
