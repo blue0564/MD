@@ -9,7 +9,7 @@ set -e
 
 expdir=exp/cnn_full_data
 dnnmdl=exp/cnn_full_data/1
-stage=-1
+stage=0
 nj=1
 
 wavdir=/Databases/MusicDetection/MD-test/wav
@@ -47,7 +47,7 @@ if [ $stage -le -1 ]; then
 fi
 
 decdir=$expdir/decode_mask
-if [ $stage -le -2 ]; then
+if [ $stage -le 0 ]; then
   rm -rf $decdir
   mkdir -p $decdir
 
@@ -60,7 +60,7 @@ if [ $stage -le -2 ]; then
     rttmfile=$(echo $line | cut -d' ' -f2)
     filename=$(basename $wavfile .wav) 
     echo ${spec_opts}
-    python tfdeep/make_spec_rttm.py ${spec_opts} $wavfile $rttmfile $decdir/${filename}.spec $decdir/${filename}.lab
+    python cnn/make_cnn_egs2.py -d ${spec_opts} --rttm-file=${rttmfile} $wavfile  $decdir/${filename}.npy $decdir/${filename}.pos
 
 
   done 
