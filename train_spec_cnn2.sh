@@ -8,7 +8,7 @@ affix=full_data
 
 exp_dir=exp/cnn_${affix}
 nj=1
-stage=0
+stage=1
 
 #tfdeep_dir=tfdeep
 #[[ ! -d $tfdeep_dir ]] && echo "ERROR : not exist tfdeep directory" && exit 1;
@@ -45,7 +45,7 @@ if [ $stage -le 0 ]; then
 
 fi
 
-if [ $stage -le -1 ]; then
+if [ $stage -le 1 ]; then
   mdldir=${exp_dir}/1
   rm -rf ${mdldir}
   mkdir -p ${mdldir}

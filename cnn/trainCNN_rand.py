@@ -160,8 +160,8 @@ def main():
     random.shuffle(pos_lab_list)
 
     mylogger.info("Read validation data")
-    val_inx = int(len(pos_lab_list)/100.0*val_rate)
-    # val_inx = 5
+    # val_inx = int(len(pos_lab_list)/100.0*val_rate)
+    val_inx = 500
     val_pos_lab_list = pos_lab_list[0:val_inx]
 
     val_data, val_lab_list = array_io.fast_load_array_from_pos_lab_list(datfile,val_pos_lab_list)
@@ -200,37 +200,37 @@ def main():
         x_img = tf.reshape(x, [-1,fdim,tdim,1])
         img_size = numpy.array([fdim,tdim])
 
-    with tf.name_scope("Layer 1: Conv_maxpool_dropout") as scope:
+    with tf.name_scope("Layer_1_Conv_maxpool_dropout") as scope:
         conv1 = tf.layers.conv2d(inputs=x_img, filters=32, kernel_size=[3, 3],
                                  padding="SAME", activation=tf.nn.relu)
         pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2,2],
                                         padding="SAME", strides=2)
         dropout1 = tf.layers.dropout(inputs=pool1, rate=keepProb, training=bool_dropout)
-        img_size = numpy.floor(img_size/2.0)
+        img_size = numpy.ceil(img_size/2.0)
 
-    with tf.name_scope("Layer 2: Conv_maxpool_dropout") as scope:
+    with tf.name_scope("Layer_2_Conv_maxpool_dropout") as scope:
         conv2 = tf.layers.conv2d(inputs=dropout1, filters=64, kernel_size=[3, 3],
                                  padding="SAME", activation=tf.nn.relu)
         pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2,2],
                                         padding="SAME", strides=2)
         dropout2 = tf.layers.dropout(inputs=pool2, rate=keepProb, training=bool_dropout)
-        img_size = numpy.floor(img_size/2.0)
+        img_size = numpy.ceil(img_size/2.0)
 
-    with tf.name_scope("Layer 3: Conv_maxpool_dropout") as scope:
+    with tf.name_scope("Layer_3_Conv_maxpool_dropout") as scope:
         conv3 = tf.layers.conv2d(inputs=dropout2, filters=128, kernel_size=[3, 3],
                                  padding="SAME", activation=tf.nn.relu)
         pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2],
                                         padding="SAME", strides=2)
         dropout3 = tf.layers.dropout(inputs=pool3, rate=keepProb, training=bool_dropout)
-        img_size = numpy.floor(img_size / 2.0)
+        img_size = numpy.ceil(img_size / 2.0)
 
-    with tf.name_scope("Layer 4: Fully_Connected") as scope:
-        flat_size = img_size[0]*img_size[1]*128
+    with tf.name_scope("Layer_4_Fully_Connected") as scope:
+        flat_size = int(img_size[0]*img_size[1]*128)
         flat4 = tf.reshape(dropout3, [-1, flat_size])
         fc4 = tf.layers.dense(inputs=flat4, units=2048, activation=tf.nn.relu)
         dropout4 = tf.layers.dropout(inputs=fc4, rate=keepProb, training=bool_dropout)
 
-    with tf.name_scope("Layer 5: Fully_Connected") as scope:
+    with tf.name_scope("Layer_5_Fully_Connected") as scope:
         fc5 = tf.layers.dense(inputs=dropout4, units=1028, activation=tf.nn.relu)
         dropout5 = tf.layers.dropout(inputs=fc5, rate=keepProb, training=bool_dropout)
 
