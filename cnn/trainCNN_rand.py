@@ -92,15 +92,13 @@ def main():
     (o, args) = parser.parse_args()
     (datfile, posfile, classfile, expdir, logfile) = args
 
-    print "Developing CNN script############"
-
-
-    ## set the log 
-    mylogger = logging.getLogger("trainDNN")
+    ## set the log
+    mylogger = logging.getLogger("trainCNN")
     mylogger.setLevel(logging.INFO)  # level: debug<info<warning<error<critical, default:warning
 
     # set print format. In this script: time, message
-    formatter = logging.Formatter('Time: %(asctime)s,\nMessage: %(message)s')
+    # formatter = logging.Formatter('Time: %(asctime)s,\nMessage: %(message)s')
+    formatter = logging.Formatter('%(message)s | %(asctime)s')
 
     stream_handler = logging.StreamHandler()  # set handler, print to terminal window
     # stream_handler.setFormatter(formatter)
@@ -115,7 +113,8 @@ def main():
     # mylogger.info(sys.argv)
 
     # don't print like format setted in formatter
-    file_handler.setFormatter("")
+    # file_handler.setFormatter("")
+    file_handler.setFormatter(formatter)
     mylogger.addHandler(file_handler)
 
     # check the number of input argument
@@ -134,12 +133,12 @@ def main():
     # spec_stride = o.spec_stride # the smaller value, the larger the number of spectrograms extracted from a wavfile
     keep_prob = o.keep_prob
 
-    # filt_1 = [32, 5, 2]  # configuration for conv1 in [num_filt,kern_size,pool_stride]
-    # filt_2 = [20, 5, 2]
-    # num_fc_1 = 1024
-
     ### End parse options 
-    
+
+
+    mylogger.info("Start train cnn")
+
+
     ### Read file of train data and label
     # create dict using 'class-dict-file' for converting label(string) to label(int)
     class_dict = {}
@@ -160,11 +159,12 @@ def main():
     random.shuffle(pos_lab_list)
 
     mylogger.info("Read validation data")
-    # val_inx = int(len(pos_lab_list)/100.0*val_rate)
-    val_inx = 500
+    val_inx = int(len(pos_lab_list)/100.0*val_rate)
+    # val_inx = 500
     val_pos_lab_list = pos_lab_list[0:val_inx]
 
     val_data, val_lab_list = array_io.fast_load_array_from_pos_lab_list(datfile,val_pos_lab_list)
+    mylogger.info("Finish read validattion data")
     val_lab = convert_class_from_list_to_array(val_lab_list, class_dict)
 
     val_lab_oh = common_io.dense_to_one_hot_from_range(val_lab, class_info)
@@ -176,13 +176,20 @@ def main():
     total_batch = int(len(tr_pos_lab_list)/mini_batch)
 
 
+    file_handler.setFormatter("")
+    mylogger.addHandler(file_handler)
     ### Main script ###
     mylogger.info('######### Configuration of CNN-model #########')
     mylogger.info('# Dimension of input data = [%d, %d], # of classes = %d' %(fdim,tdim,nclasses))
     mylogger.info('# Mini-batch size = %d, # of epoch = %d' %(mini_batch,nepoch))
     mylogger.info('# Learning rate = %f, probability of keeping in dropout = %0.1f' %(lr,keep_prob))
-    mylogger.info('LOG : train data size = %d, # of iterations = %d'%(len(tr_pos_lab_list),total_batch))
-    mylogger.info('LOG : validation data size is %d' % (val_data.shape[0]))
+    mylogger.info('# train data size = %d, # of iterations = %d'%(len(tr_pos_lab_list),total_batch))
+    mylogger.info('# validation data size is %d' % (val_data.shape[0]))
+    mylogger.info('###############################################')
+
+    file_handler.setFormatter(formatter)
+    mylogger.addHandler(file_handler)
+
     # with tf.device('/gpu:0'):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
