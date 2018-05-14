@@ -46,7 +46,7 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
-  mdldir=${exp_dir}/1
+  mdldir=${exp_dir}/2
   rm -rf ${mdldir}
   mkdir -p ${mdldir}
   class_conf=conf/class_map_for_cnn.conf
