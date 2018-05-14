@@ -135,9 +135,7 @@ def main():
 
     ### End parse options 
 
-
     mylogger.info("Start train cnn")
-
 
     ### Read file of train data and label
     # create dict using 'class-dict-file' for converting label(string) to label(int)
@@ -245,6 +243,7 @@ def main():
         out_y = tf.layers.dense(inputs=dropout5, units=nclasses, name="out_y")
 
     with tf.name_scope("SoftMax") as scope:
+        out_y_softmax = tf.nn.softmax(out_y,name="out_y_softmax")
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out_y,labels=lab_y),name="ce")
 
         #loss_summ = tf.scalar_summary("cross entropy_loss", cost)
