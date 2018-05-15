@@ -92,15 +92,13 @@ def main():
     (o, args) = parser.parse_args()
     (datfile, posfile, classfile, expdir, logfile) = args
 
-    print "Developing CNN script############"
-
-
-    ## set the log 
-    mylogger = logging.getLogger("trainDNN")
+    ## set the log
+    mylogger = logging.getLogger("trainCNN")
     mylogger.setLevel(logging.INFO)  # level: debug<info<warning<error<critical, default:warning
 
     # set print format. In this script: time, message
-    formatter = logging.Formatter('Time: %(asctime)s,\nMessage: %(message)s')
+    # formatter = logging.Formatter('Time: %(asctime)s,\nMessage: %(message)s')
+    formatter = logging.Formatter('%(message)s | %(asctime)s')
 
     stream_handler = logging.StreamHandler()  # set handler, print to terminal window
     # stream_handler.setFormatter(formatter)
@@ -115,7 +113,8 @@ def main():
     # mylogger.info(sys.argv)
 
     # don't print like format setted in formatter
-    file_handler.setFormatter("")
+    # file_handler.setFormatter("")
+    file_handler.setFormatter(formatter)
     mylogger.addHandler(file_handler)
 
     # check the number of input argument
@@ -134,12 +133,10 @@ def main():
     # spec_stride = o.spec_stride # the smaller value, the larger the number of spectrograms extracted from a wavfile
     keep_prob = o.keep_prob
 
-    # filt_1 = [32, 5, 2]  # configuration for conv1 in [num_filt,kern_size,pool_stride]
-    # filt_2 = [20, 5, 2]
-    # num_fc_1 = 1024
-
     ### End parse options 
-    
+
+    mylogger.info("Start train cnn")
+
     ### Read file of train data and label
     # create dict using 'class-dict-file' for converting label(string) to label(int)
     class_dict = {}
@@ -161,10 +158,11 @@ def main():
 
     mylogger.info("Read validation data")
     val_inx = int(len(pos_lab_list)/100.0*val_rate)
-    # val_inx = 5
+    # val_inx = 500
     val_pos_lab_list = pos_lab_list[0:val_inx]
 
     val_data, val_lab_list = array_io.fast_load_array_from_pos_lab_list(datfile,val_pos_lab_list)
+    mylogger.info("Finish read validattion data")
     val_lab = convert_class_from_list_to_array(val_lab_list, class_dict)
 
     val_lab_oh = common_io.dense_to_one_hot_from_range(val_lab, class_info)
@@ -176,13 +174,20 @@ def main():
     total_batch = int(len(tr_pos_lab_list)/mini_batch)
 
 
+    file_handler.setFormatter("")
+    mylogger.addHandler(file_handler)
     ### Main script ###
     mylogger.info('######### Configuration of CNN-model #########')
     mylogger.info('# Dimension of input data = [%d, %d], # of classes = %d' %(fdim,tdim,nclasses))
     mylogger.info('# Mini-batch size = %d, # of epoch = %d' %(mini_batch,nepoch))
     mylogger.info('# Learning rate = %f, probability of keeping in dropout = %0.1f' %(lr,keep_prob))
-    mylogger.info('LOG : train data size = %d, # of iterations = %d'%(len(tr_pos_lab_list),total_batch))
-    mylogger.info('LOG : validation data size is %d' % (val_data.shape[0]))
+    mylogger.info('# train data size = %d, # of iterations = %d'%(len(tr_pos_lab_list),total_batch))
+    mylogger.info('# validation data size is %d' % (val_data.shape[0]))
+    mylogger.info('###############################################')
+
+    file_handler.setFormatter(formatter)
+    mylogger.addHandler(file_handler)
+
     # with tf.device('/gpu:0'):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -200,37 +205,37 @@ def main():
         x_img = tf.reshape(x, [-1,fdim,tdim,1])
         img_size = numpy.array([fdim,tdim])
 
-    with tf.name_scope("Layer 1: Conv_maxpool_dropout") as scope:
+    with tf.name_scope("Layer_1_Conv_maxpool_dropout") as scope:
         conv1 = tf.layers.conv2d(inputs=x_img, filters=32, kernel_size=[3, 3],
                                  padding="SAME", activation=tf.nn.relu)
         pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2,2],
                                         padding="SAME", strides=2)
         dropout1 = tf.layers.dropout(inputs=pool1, rate=keepProb, training=bool_dropout)
-        img_size = numpy.floor(img_size/2.0)
+        img_size = numpy.ceil(img_size/2.0)
 
-    with tf.name_scope("Layer 2: Conv_maxpool_dropout") as scope:
+    with tf.name_scope("Layer_2_Conv_maxpool_dropout") as scope:
         conv2 = tf.layers.conv2d(inputs=dropout1, filters=64, kernel_size=[3, 3],
                                  padding="SAME", activation=tf.nn.relu)
         pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2,2],
                                         padding="SAME", strides=2)
         dropout2 = tf.layers.dropout(inputs=pool2, rate=keepProb, training=bool_dropout)
-        img_size = numpy.floor(img_size/2.0)
+        img_size = numpy.ceil(img_size/2.0)
 
-    with tf.name_scope("Layer 3: Conv_maxpool_dropout") as scope:
+    with tf.name_scope("Layer_3_Conv_maxpool_dropout") as scope:
         conv3 = tf.layers.conv2d(inputs=dropout2, filters=128, kernel_size=[3, 3],
                                  padding="SAME", activation=tf.nn.relu)
         pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2],
                                         padding="SAME", strides=2)
         dropout3 = tf.layers.dropout(inputs=pool3, rate=keepProb, training=bool_dropout)
-        img_size = numpy.floor(img_size / 2.0)
+        img_size = numpy.ceil(img_size / 2.0)
 
-    with tf.name_scope("Layer 4: Fully_Connected") as scope:
-        flat_size = img_size[0]*img_size[1]*128
+    with tf.name_scope("Layer_4_Fully_Connected") as scope:
+        flat_size = int(img_size[0]*img_size[1]*128)
         flat4 = tf.reshape(dropout3, [-1, flat_size])
         fc4 = tf.layers.dense(inputs=flat4, units=2048, activation=tf.nn.relu)
         dropout4 = tf.layers.dropout(inputs=fc4, rate=keepProb, training=bool_dropout)
 
-    with tf.name_scope("Layer 5: Fully_Connected") as scope:
+    with tf.name_scope("Layer_5_Fully_Connected") as scope:
         fc5 = tf.layers.dense(inputs=dropout4, units=1028, activation=tf.nn.relu)
         dropout5 = tf.layers.dropout(inputs=fc5, rate=keepProb, training=bool_dropout)
 
@@ -238,6 +243,7 @@ def main():
         out_y = tf.layers.dense(inputs=dropout5, units=nclasses, name="out_y")
 
     with tf.name_scope("SoftMax") as scope:
+        out_y_softmax = tf.nn.softmax(out_y,name="out_y_softmax")
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out_y,labels=lab_y),name="ce")
 
         #loss_summ = tf.scalar_summary("cross entropy_loss", cost)

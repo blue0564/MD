@@ -48,6 +48,8 @@ from deeputils.deepio import array_io
 from deeputils.vad import vadwav
 from deeputils.feature import extract_spec
 
+from Time2Class_test.Time2Class import Time2Class
+
 
 ### hyper parameters ###
 log_level = 0
@@ -70,6 +72,9 @@ def main():
 
     usage = "%prog [options] <wav-file> <spec-file> <pos-file>"
     parser = OptionParser(usage)
+
+    parser.add_option("-d", "--decode", action="store_true", dest="dec",
+                      help="processing decode mode (stride=1) ", default=False)
 
     # parser.add_option('--spec-type', dest='spec_type', help='spectrogram type  [default: scispec ]',
     #                   default='scispec', type='string')
@@ -98,6 +103,8 @@ def main():
 
     parser.add_option('--target-label', dest='target_label', help='target label  [default: None ]',
                       default='None', type='string')
+    parser.add_option('--rttm-file', dest='rttm_file', help='rttm file for target label',
+                      default='', type='string')
 
     (o, args) = parser.parse_args()
     (wav_path, spec_file, pos_file) = args
@@ -117,6 +124,12 @@ def main():
         fft_size_ = frame_size_
     else:
         fft_size_ = o.fft_size
+
+    if o.dec:
+        if log_level > 0:
+            print "LOG: decode mode..."
+        spec_stride = 1
+
 
     # segment_time is center of each frame / spec_data = [frequncy x time]
     if log_level > 0:
@@ -212,6 +225,9 @@ def main():
         plt.hold(False)
 
 
+    if o.rttm_file != '':
+        time,cla = Time2Class.Read_rttm(o.rttm_file)
+
     if log_level > 0:
         print 'LOG: output spec file and pos file'
 
@@ -221,7 +237,12 @@ def main():
         speci = spec_data_zm_pad[:,begi:endi]
         posi = array_io.save_append_array(spec_file,speci)
         centeri = begi + splice_size
-        labeli = (target_label if (vad_data_pad[centeri] == 1) else 'sil')
+
+        if o.rttm_file != '': # don't use vad results
+            target_time = begi*o.frame_shift*0.001 # because padding
+            labeli = Time2Class.Search_class(inputTime=target_time,time=time,cla=cla)
+        else:
+            labeli = (target_label if (vad_data_pad[centeri] == 1) else 'sil')
 
         with open(pos_file,'a') as f:
             f.write("%i %s\n"%(posi,labeli))
