@@ -67,6 +67,17 @@ def spec_zm(spec_data):
     zm_data = spec_data - np.transpose(mean_data)
     return zm_data
 
+def spec_zmuv(spec_data):
+
+    ntime = spec_data.shape[1]
+    mean_data = np.matlib.repmat(np.mean(spec_data,axis=1),ntime,1)
+    # exp_mean = np.matlib.repmat(np.mean((spec_data*spec_data),axis=1),ntime,1)
+    # mean_exp = mean_data * mean_data
+    var_data = np.matlib.repmat(np.var(spec_data,axis=1),ntime,1)
+
+    zmuv_data = (spec_data - np.transpose(mean_data))/np.transpose(var_data)
+    return zmuv_data
+
 
 def main():
 
@@ -75,6 +86,8 @@ def main():
 
     parser.add_option("-d", "--decode", action="store_true", dest="dec",
                       help="processing decode mode (stride=1) ", default=False)
+    parser.add_option("-v", "--outvad", action="store_true", dest="outvad",
+                      help="output vad result mode", default=False)
 
     # parser.add_option('--spec-type', dest='spec_type', help='spectrogram type  [default: scispec ]',
     #                   default='scispec', type='string')
@@ -95,11 +108,15 @@ def main():
     parser.add_option('--vad-min-sil-frames', dest='vad_min_sil_frames',
                       help='minimum length of silence for VAD [default: 50 frames]',
                       default=50, type='int')
+    parser.add_option('--vad-file', dest='vad_file', help='vad file name to save ',
+                      default='', type='string')
 
     parser.add_option('--splice-size', dest='splice_size', help='splice size [default: 5 frames ]',
                       default=5, type='int')
     parser.add_option('--spec-stride', dest='spec_stride', help='spectrogram stride [default: 5 frames ]',
                       default=5, type='int')
+    parser.add_option('--normalize', dest='normal', help='normalize data - zm, zmuv ',
+                      default='', type='string')
 
     parser.add_option('--target-label', dest='target_label', help='target label  [default: None ]',
                       default='None', type='string')
@@ -107,7 +124,12 @@ def main():
                       default='', type='string')
 
     (o, args) = parser.parse_args()
-    (wav_path, spec_file, pos_file) = args
+    if len(args) != 3:
+        print "ERROR: wrong argument -",
+        print args
+        raise()
+    else:
+        (wav_path, spec_file, pos_file) = args
 
     sr_ = o.sample_rate
     frame_size_ = np.int(o.frame_size * sr_ * 0.001)
@@ -149,7 +171,13 @@ def main():
         plt.xlabel('Time [sec]')
 
     # normalize zero mean
-    spec_data_zm = spec_zm(spec_data)
+    if o.normal == 'zm':
+        spec_data_zm = spec_zm(spec_data)
+    elif o.normal == 'zmuv':
+        spec_data_zm = spec_zmuv(spec_data)
+    else :
+        spec_data_zm = spec_data
+
     if log_level > 1:
         fig = plt.figure(fignum)
         fignum += 1
@@ -245,7 +273,12 @@ def main():
             labeli = (target_label if (vad_data_pad[centeri] == 1) else 'sil')
 
         with open(pos_file,'a') as f:
-            f.write("%i %s\n"%(posi,labeli))
+            if o.outvad:
+                f.write("%i %s %d\n"%(posi, labeli, vad_data_pad[centeri]))
+            else:
+                f.write("%i %s\n"%(posi,labeli))
+
+
 
         begi += spec_stride
         endi = begi + splice_size*2 + 1
