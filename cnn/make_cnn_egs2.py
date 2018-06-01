@@ -23,6 +23,9 @@
     Options
     -------
     --sample-frequency (int) : sample rate of wav (Hz) [default: 16000]
+    --feat-type (string) : type of feature [default: scispec]
+        - scispec : spectrogram using scipy
+        - diffspec : difference of center in spectrogram splice (scispec)
     --frame-length (int) : frame size (ms) [default: 25 ms]
     --frame-shift (int) : frame shift size (ms) [default: 10 ms]
     --fft-size (int) : FFT window size (sample) [default: frame_size*sample_frequency]
@@ -89,8 +92,8 @@ def main():
     parser.add_option("-v", "--outvad", action="store_true", dest="outvad",
                       help="output vad result mode", default=False)
 
-    # parser.add_option('--spec-type', dest='spec_type', help='spectrogram type  [default: scispec ]',
-    #                   default='scispec', type='string')
+    parser.add_option('--feat-type', dest='feat_type', help='type of feature  [default: scispec ]',
+                      default='scispec', type='string')
     parser.add_option('--sample-frequency', dest='sample_rate', help='sample rate of wav  [default: 16kHz ]',
                       default=16000, type='int')
     parser.add_option('--frame-length', dest='frame_size', help='frame size (ms)  [default: 25ms ]',
@@ -132,6 +135,7 @@ def main():
         (wav_path, spec_file, pos_file) = args
 
     sr_ = o.sample_rate
+    feat_type = o.feat_type
     frame_size_ = np.int(o.frame_size * sr_ * 0.001)
     frame_shift_ = np.int(o.frame_shift * sr_ * 0.001)
     vad_aggressive = o.vad_agg # 0 ~ 3 (least ~ most agrressive)
@@ -156,7 +160,13 @@ def main():
     # segment_time is center of each frame / spec_data = [frequncy x time]
     if log_level > 0:
         print 'LOG: extract spectrogram data'
-    sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_, fft_size_)
+
+    if feat_type == 'scispec':
+        sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_, fft_size_)
+    else:
+        sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_,
+                                                                           fft_size_)
+
     if log_level > 1:
         fig = plt.figure(fignum)
         fignum += 1
@@ -200,6 +210,8 @@ def main():
     if log_level > 0:
         print 'LOG: processing vad'
     vad_index, wav_data = vadwav.decision_vad_index(wav_path, vad_aggressive, vad_frame_size, vad_min_sil_len)
+    # vad_index, wav_data = vadwav.decision_vad_index_with_statis_model(wav_path,vad_frame_size_=25,
+    #                                                                   vad_shift_size_=10, vad_fft_size=512, min_sil_frames=vad_min_sil_len)
 
     if log_level > 1:
         fig = plt.figure(fignum)
@@ -262,19 +274,29 @@ def main():
     begi = 0
     endi = begi + splice_size*2 + 1
     while endi < vad_data_pad.shape[0]:
-        speci = spec_data_zm_pad[:,begi:endi]
-        posi = array_io.save_append_array(spec_file,speci)
         centeri = begi + splice_size
+        if feat_type == 'diffspec':
+            speci_ = spec_data_zm_pad[:,begi:endi]
+            cspec = np.matlib.repmat(speci_[:,int(splice_size)],(splice_size*2+1),1)
+            a = speci_[1, int(splice_size)]
+            speci_[:, int(splice_size)] *= 2
+            speci = speci_ - np.transpose(cspec)
 
+        else:
+            speci = spec_data_zm_pad[:,begi:endi]
+
+        posi = array_io.save_append_array(spec_file,speci)
+
+        target_time = begi * o.frame_shift * 0.001  # because padding
         if o.rttm_file != '': # don't use vad results
-            target_time = begi*o.frame_shift*0.001 # because padding
             labeli = Time2Class.Search_class(inputTime=target_time,time=time,cla=cla)
         else:
             labeli = (target_label if (vad_data_pad[centeri] == 1) else 'sil')
 
         with open(pos_file,'a') as f:
             if o.outvad:
-                f.write("%i %s %d\n"%(posi, labeli, vad_data_pad[centeri]))
+                # f.write("%i %s %d\n"%(posi, labeli, vad_data_pad[centeri]))
+                f.write("%i %s %d %0.3f\n"%(posi, labeli, vad_data_pad[centeri], target_time))
             else:
                 f.write("%i %s\n"%(posi,labeli))
 

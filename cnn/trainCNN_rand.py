@@ -280,27 +280,30 @@ def main():
         begi = 0
         endi = begi + mini_batch
         for imbatch in xrange(total_batch):
+	    #print "train inx : %d - %d\n"%(begi,endi)
             batch_data, batch_lab = array_io.fast_load_array_from_pos_lab_list(datfile,tr_pos_lab_list[begi:endi])
             batch_lab_oh = common_io.dense_to_one_hot_from_range(convert_class_from_list_to_array(batch_lab,class_dict),class_info)
 
             feed_dict = {x: batch_data, lab_y: batch_lab_oh, keepProb: keep_prob, bool_dropout: True}
             sess.run(train_step, feed_dict)
             iter = iter + 1
+            begi += mini_batch
+            endi = begi + mini_batch
 
             if (iter%val_iter==0) | (iter==1): # print state of training for validation data and mini-batch
                 val_acc = []
                 val_ce = []
                 for i in range(int(val_data.shape[0]/mini_batch+1)):
-                    begi = i*mini_batch
-                    endi = (i+1)*mini_batch
-                    if begi >= val_data.shape[0]:
+                    vbegi = i*mini_batch
+                    vendi = (i+1)*mini_batch
+                    if vbegi >= val_data.shape[0]:
                         break
-                    if endi > val_data.shape[0]:
-                        endi = val_data.shape[0]
-                    ipred_val = sess.run(out_y, feed_dict={x: val_data[begi:endi],
+                    if vendi > val_data.shape[0]:
+                        vendi = val_data.shape[0]
+                    ipred_val = sess.run(out_y, feed_dict={x: val_data[vbegi:vendi],
                                                            keepProb: 1.0, bool_dropout: False})
-                    ival_acc = sess.run(accuracy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[begi:endi]})
-                    ival_ce = sess.run(cross_entropy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[begi:endi]})
+                    ival_acc = sess.run(accuracy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
+                    ival_ce = sess.run(cross_entropy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
                     val_acc.append(ival_acc)
                     val_ce.append(ival_ce)
                 val_acc = numpy.mean(numpy.array(val_acc))

@@ -48,6 +48,9 @@ def main():
   usage = "%prog [options] <test-data-file> <test-pos-label-file> <directory of model> <class-dict-file> <log-file>"
   parser = OptionParser(usage)
 
+  parser.add_option("-v", "--postvad", action="store_true", dest="postvad",
+                    help="postprocessing result from vad", default=False)
+
   parser.add_option('--out-predprob', dest='predprob',
                     help='Output file of predicted probability',
                     default='', type='string')
@@ -125,6 +128,7 @@ def main():
 
     class_dict = {}
     class_info = []
+    mylogger.info('LOG : read class file -> %s ' % (classfile))
     with open(classfile) as f:
         classlist = f.readlines()
 
@@ -152,7 +156,8 @@ def main():
 
         ref_lab = convert_class_from_list_to_array(lab_list_, class_dict)
         pred_prob = sess.run(out_y_softmax,feed_dict={x:data_, keepProb:1.0, bool_dropout: False})
-        pred_label = make_label_with_mixed(pred_prob)
+        #pred_label = make_label_with_mixed(pred_prob)
+        pred_label = np.argmax(pred_prob,axis=1)
         iacc = sess.run(accuracy, feed_dict={a: pred_label, b: ref_lab})
         acclist.append(iacc)
         mylogger.info("%d - %d : %0.2f"%(begi,endi,iacc))
@@ -167,34 +172,6 @@ def main():
 
     mylogger.info("Total accuracy : %0.3f" % (acc_result))
 
-
-
-    # pred_prob  = sess.run(out_y,feed_dict)
-  #
-  #   pred_data =  sess.run(out_y,feed_dict ={x:test_data, keepProb:1.0})
-  #
-  # if in_lab:
-  #   test_lab = myio.read_label_file(label_file)
-  #   test_lab_ot = myio.dense_to_one_hot(test_lab,2)
-  #
-  #   # The 'pred_acc', 'pred_ce' is modified by WoonHaeng, Heo in 2018.03.21.0919
-  #   # The 'keepProb:1.0' command is added
-  #   pred_acc = sess.run(acc, feed_dict={out_y: pred_data, lab_y: test_lab_ot, keepProb:1.0})
-  #   pred_ce = sess.run(ce, feed_dict={out_y: pred_data, lab_y: test_lab_ot, keepProb:1.0})
-  #   print 'Results : '
-  #   print '  # of data = %d' %(pred_data.shape[0])
-  #   print '  average of cross entropy = %f' %(pred_ce)
-  #   print '  accuracy = %2.1f%%' %(pred_acc*100)
-  #   print '### done\n'
-  #
-  # if o.predprob != '':
-  #   print 'LOG : write predicted probability -> %s' %(o.predprob)
-  #   myio.write_predicted_prob(pred_data,o.predprob)
-  #
-  # if o.predlab != '':
-  #   print 'LOG : write predicted label -> %s' %(o.predlab)
-  #   pred_lab = numpy.argmax(pred_data, axis=1) + o.minpredlab
-  #   myio.write_predicted_lab(pred_lab,o.predlab)
 
 
 if __name__=="__main__":

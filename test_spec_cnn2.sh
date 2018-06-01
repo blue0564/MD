@@ -12,6 +12,7 @@ stage=2
 wavdir=/Databases/MusicDetection/MD-test/wav
 textdir=/Databases/MusicDetection/MD-test/annotation
 conf=${expdir}/train_feat.conf
+class_conf=${expdir}/class_map_for_cnn_mix.conf
 
 
 datadir=`pwd`/data/data_mask
@@ -57,8 +58,12 @@ if [ $stage -le 1 ]; then
     rttmfile=$(echo $line | cut -d' ' -f2)
     filename=$(basename $wavfile .wav) 
     echo ${spec_opts}
-    python cnn/make_cnn_egs2.py -d -v ${spec_opts} --rttm-file=${rttmfile} $wavfile  $decdir/${filename}.npy $decdir/${filename}.pos
+    python cnn/make_cnn_egs2.py -d -v ${spec_opts} --rttm-file=${rttmfile} $wavfile  $decdir/${filename}.npy $decdir/${filename}_with_sil.pos
 
+    grep -v 'sil' $decdir/${filename}_with_sil.pos > $decdir/${filename}.pos
+
+    #python cnn/check_vad_performance.py --class-file=${class_conf} $decdir/${filename}.pos $decdir/${filename}.confmat_vad
+ 
 
   done 
 fi
@@ -66,13 +71,12 @@ fi
 if [ $stage -le 2 ]; then
  # ckpt=10000
   mdlnum=$(basename $dnnmdl )
-  class_conf=conf/class_map_for_cnn_mix.conf
   [[ ! -d ${decdir} ]] && echo "ERROR: not exist decode directory" && exit 1;
   find ${decdir} -iname "*.npy" | sort > ${decdir}/dec_data.scp
 
-  for ckpt in 10000 20000 30000 40000
+  for ckpt in 40000 50000
   do
-    cat ${decdir}/dec_data.scp | head -n 1 |
+    cat ${decdir}/dec_data.scp | 
     while read datfile
     do
       filename=$(basename $datfile .wav)
@@ -82,7 +86,7 @@ if [ $stage -le 2 ]; then
       cfmfile=$decdir/${filename}_mdl${mdlnum}_${ckpt}.confmat
       rm -f ${labfile} ${logfile}
       python cnn/predCNN_rand.py --checkpoint=${ckpt} --out-predlab=${labfile} ${datfile} ${posfile} ${dnnmdl} ${class_conf} ${logfile}
-      python cnn/make_confusion_matrix.py ${labfile} ${cfmfile}
+      python cnn/make_confusion_matrix.py --class-file=${class_conf} ${labfile} ${cfmfile}
 
     done
   done 

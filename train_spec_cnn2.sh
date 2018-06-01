@@ -10,7 +10,7 @@ exp_dir=exp/cnn_${affix}
 mdldir=${exp_dir}/1
 conf=conf/spec_data.conf
 class_conf=conf/class_map_for_cnn_mix.conf
-stage=0
+stage=1
 
 [[ ! -d ${exp_dir} ]] && mkdir -p ${exp_dir}
 rm -rf ${mdldir}
@@ -37,20 +37,23 @@ if [ $stage -le 0 ]; then
   rm -rf $featdir ${exp_dir}/feats.log
   mkdir -p $featdir
   cp ${conf} ${exp_dir}/train_feat.conf
-  cnn/make_spec_data.sh $conf data/musan_speech $featdir/spec_data.npy $featdir/spec_data.pos "speech" 
-  cnn/make_spec_data.sh $conf data/musan_music $featdir/spec_data.npy $featdir/spec_data.pos "music"
-  cnn/make_spec_data.sh $conf data/musan_noise $featdir/spec_data.npy $featdir/spec_data.pos "noise"
-  cnn/make_spec_data.sh $conf data/musan_mixed $featdir/spec_data.npy $featdir/spec_data.pos "mixed"
+  cnn/make_spec_data.sh $conf data/musan_speech $featdir/spec_data.npy $featdir/spec_data_with_sil.pos "speech" 
+  cnn/make_spec_data.sh $conf data/musan_music $featdir/spec_data.npy $featdir/spec_data_with_sil.pos "music"
+  cnn/make_spec_data.sh $conf data/musan_noise $featdir/spec_data.npy $featdir/spec_data_with_sil.pos "noise"
+  cnn/make_spec_data.sh $conf data/musan_mixed $featdir/spec_data.npy $featdir/spec_data_with_sil.pos "mixed"
+
+  grep -v 'sil' $featdir/spec_data_with_sil.pos > $featdir/spec_data.pos
 fi
 
 if [ $stage -le 1 ]; then
   cp ${class_conf} ${exp_dir}/
-  python cnn/trainCNN_rand.py --num-epoch 15 --minibatch 500 \
+  python cnn/trainCNN_rand.py --num-epoch 50 --minibatch 500 \
 				--keep-prob 0.7 --val-iter 100 --save-iter 1000 \
-				--val-rate 5 --shuff-epoch 100 --lr 0.0001 \
+				--val-rate 1 --shuff-epoch 100 --lr 0.0001 \
 				--active-function relu \
 				${exp_dir}/egs/spec_data.npy ${exp_dir}/egs/spec_data.pos ${class_conf} ${mdldir} ${mdldir}/train.log
 
 fi
+
 
 
