@@ -46,9 +46,17 @@ def main():
         lab = int(pred_lab.split()[1])
         confmat[pred,lab] += 1
 
+    ncorrect = 0
+    totaln = 0
+    for i in xrange(nclasses):
+        totaln += np.sum(confmat[:,i])
+        ncorrect += confmat[i,i]
+    acc = (float(ncorrect)/float(totaln))*100.0
+
     with open(confmat_file,'w') as f:
         f.write("Total number : %d\n"%(len(pred_lab_list)))
-        f.write("pred\\refs :\t")
+        f.write("Accuracy : %0.2f\n"%(acc))
+        f.write("pred\\refs :")
         for cls in xrange(nclasses):
             f.write("\t%s"%class_dict[cls])
         f.write("\n")

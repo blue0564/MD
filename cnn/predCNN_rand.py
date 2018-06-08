@@ -118,6 +118,7 @@ def main():
     out_y_softmax = graph.get_tensor_by_name("SoftMax/out_y_softmax:0")
     keepProb = graph.get_tensor_by_name("keepProb:0")
     bool_dropout = graph.get_tensor_by_name("bool_dropout:0")
+    # convout = graph.get_tensor_by_name("Layer_4_Fully_Connected/conv_flat")
     # ce = graph.get_tensor_by_name("SoftMax/ce:0")
     # acc = graph.get_tensor_by_name("acc:0")
 
@@ -141,12 +142,12 @@ def main():
 
     # mylogger.info("Read data")
     pos_lab_list = array_io.read_pos_lab_file(posfile)
-    niter = int(len(pos_lab_list)/500) + 1
+    niter = int(len(pos_lab_list)/100) + 1
 
     acclist = []
     begi = 0
     for i in xrange(niter):
-        endi = begi + 500
+        endi = begi + 100
         if endi > len(pos_lab_list):
             endi = len(pos_lab_list)
 
@@ -166,7 +167,7 @@ def main():
                 for j in xrange(pred_label.shape[0]):
                     f.write("%d %d\n"%(pred_label[j],ref_lab[j]))
 
-        begi += 500
+        begi += 100
 
     acc_result = np.mean(np.array(acclist))
 

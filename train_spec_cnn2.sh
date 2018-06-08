@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright 2018   Byeong-Yong Jang
+# train CNN model using MUSAN database
 
 . cmd.sh
 . path.sh

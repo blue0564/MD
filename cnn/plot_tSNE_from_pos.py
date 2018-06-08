@@ -25,7 +25,7 @@ def plot_tSNE(data_,lab_,fignum=1):
     for lab_ in target_lab:
         if lab_ == 'speech':
             spinx.append(int(i))
-        elif lab_ == 'music':
+        elif (lab_ == 'music') | (lab_ == 'mu_no'):
             muinx.append(int(i))
         elif lab_ == 'mixed':
             mxinx.append(int(i))

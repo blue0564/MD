@@ -103,6 +103,9 @@ def main():
     parser.add_option('--fft-size', dest='fft_size', help='fft size [default: frame size ]',
                       default=-1, type='int')
 
+    parser.add_option('--num-mfcc', dest='num_mfcc', help='number of mfcc [default: 13 ]',
+                      default=13, type='int')
+
     parser.add_option('--vad-aggressive', dest='vad_agg', help='aggressive number for VAD (0~3 / least ~ most) [default: 3 ]',
                       default=3, type='int')
     parser.add_option('--vad-frame-size', dest='vad_frame_size',
@@ -138,6 +141,7 @@ def main():
     feat_type = o.feat_type
     frame_size_ = np.int(o.frame_size * sr_ * 0.001)
     frame_shift_ = np.int(o.frame_shift * sr_ * 0.001)
+    num_mfcc = o.num_mfcc
     vad_aggressive = o.vad_agg # 0 ~ 3 (least ~ most agrressive)
     vad_frame_size = o.vad_frame_size # only 10 or 20 or 30 (ms)
     vad_min_sil_len = o.vad_min_sil_frames
@@ -163,6 +167,18 @@ def main():
 
     if feat_type == 'scispec':
         sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_, fft_size_)
+    elif feat_type == 'rosamelspec':
+        segment_time, spec_data = extract_spec.mel_spec_librosa(wav_path, sr_, frame_size_, frame_shift_,
+                                                            fft_size_)
+    elif feat_type == 'rosamfcc':
+        segment_time, spec_data = extract_spec.mfcc_librosa(wav_path, sr_, frame_size_, frame_shift_,
+                                                                           fft_size_,n_mfcc_=num_mfcc)
+    elif feat_type == 'rosamfccdel':
+        segment_time, spec_data = extract_spec.mfccdel_librosa(wav_path, sr_, frame_size_, frame_shift_,
+                                                            fft_size_, n_mfcc_=num_mfcc)
+    elif feat_type == 'rosachroma':
+        segment_time, spec_data = extract_spec.chroma_spec_librosa(wav_path, sr_, frame_size_, frame_shift_,
+                                                            fft_size_)
     else:
         sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_,
                                                                            fft_size_)

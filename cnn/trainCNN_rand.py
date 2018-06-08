@@ -189,7 +189,7 @@ def main():
     mylogger.addHandler(file_handler)
 
     # with tf.device('/gpu:0'):
-    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+    gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
     #sess = tf.InteractiveSession()
 
@@ -231,7 +231,7 @@ def main():
 
     with tf.name_scope("Layer_4_Fully_Connected") as scope:
         flat_size = int(img_size[0]*img_size[1]*128)
-        flat4 = tf.reshape(dropout3, [-1, flat_size])
+        flat4 = tf.reshape(dropout3, [-1, flat_size],name='conv_flat')
         fc4 = tf.layers.dense(inputs=flat4, units=2048, activation=tf.nn.relu)
         dropout4 = tf.layers.dropout(inputs=fc4, rate=keepProb, training=bool_dropout)
 
