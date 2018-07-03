@@ -225,7 +225,14 @@ def main():
     # Voice activity detector using 'webrtcvad'
     if log_level > 0:
         print 'LOG: processing vad'
-    vad_index, wav_data = vadwav.decision_vad_index(wav_path, vad_aggressive, vad_frame_size, vad_min_sil_len)
+
+    if target_label == 'mixed':
+        vadfile = "%s%s"%(wav_path[0:-3],"npy")
+        vad_index_mu_sp = np.load(vadfile)
+        vad_index = np.sum(vad_index_mu_sp,axis=1)
+        vad_index[(vad_index>1)] = 1
+    else:
+        vad_index, wav_data = vadwav.decision_vad_index(wav_path, vad_aggressive, vad_frame_size, vad_min_sil_len)
     # vad_index, wav_data = vadwav.decision_vad_index_with_statis_model(wav_path,vad_frame_size_=25,
     #                                                                   vad_shift_size_=10, vad_fft_size=512, min_sil_frames=vad_min_sil_len)
 
@@ -260,7 +267,22 @@ def main():
         vadi = vad_index[begi:endi]
         vad_data[i] = (1 if vadwav.is_voice_frame(vadi) else 0)
 
+        # 0 : sil, 1 : music, 2: speech, 3: mixed
+        if target_label=='mixed':
+            vad_music = np.sum(vad_index_mu_sp[begi:endi,0])
+            vad_speech = np.sum(vad_index_mu_sp[begi:endi, 1])
+            threshold = (endi-begi) * 0.7
+            if ((vad_music >= threshold) & (vad_speech >= threshold)):
+                vad_data[i] = 3
+            elif (vad_music >= threshold):
+                vad_data[i] = 1
+            elif (vad_speech >= threshold):
+                vad_data[i] = 2
+            else:
+                vad_data[i] = 0
+
     vad_data_pad = np.pad(vad_data,(splice_size,splice_size),'edge')
+
 
     if log_level > 1:
         fig = plt.figure(fignum)
@@ -306,6 +328,15 @@ def main():
         target_time = begi * o.frame_shift * 0.001  # because padding
         if o.rttm_file != '': # don't use vad results
             labeli = Time2Class.Search_class(inputTime=target_time,time=time,cla=cla)
+        elif target_label == 'mixed':
+            if vad_data_pad[centeri] == 0:
+                labeli = 'sil'
+            elif vad_data_pad[centeri] == 1:
+                labeli = 'music'
+            elif vad_data_pad[centeri] == 2:
+                labeli = 'speech'
+            else:
+                labeli = 'mixed'
         else:
             labeli = (target_label if (vad_data_pad[centeri] == 1) else 'sil')
 

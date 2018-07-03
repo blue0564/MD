@@ -36,7 +36,7 @@ def make_label_with_mixed(prob_):
     return _lab
 
 def main():
-  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
+  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
 
   # sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
   sess = tf.InteractiveSession()
@@ -101,6 +101,7 @@ def main():
   mylogger.info("Start predict cnn")
 
   with tf.device('/cpu:0'):
+  # with tf.device(''):
     # load meta graph and restore weights
     mylogger.info('LOG : load model -> %s' %(mdldir+'/mdl.meta'))
     graph = tf.get_default_graph()

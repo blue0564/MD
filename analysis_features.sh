@@ -3,7 +3,7 @@
 
 set -e
 
-exp_dir=exp/anal_feat_125_diffspec
+exp_dir=exp/anal_feat_chroma
 conf=conf/anal_spec.conf
 stage=0
 
@@ -43,7 +43,7 @@ decdir=${exp_dir}/drama_mask
 if [ $stage -le 1 ]; then
   spec_opts=$(cat $conf | sed 's/#.*$//g' | sed ':a;N;$!ba;s/\n/ /g')
   
-  cat ${datadir}/wav2rttm.scp |
+  cat ${datadir}/wav2rttm.scp | sort | head -n 1 |
   while read line
   do
     wavfile=$(echo $line | cut -d' ' -f1)

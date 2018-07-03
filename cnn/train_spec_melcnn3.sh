@@ -2,27 +2,19 @@
 # Copyright 2018   Byeong-Yong Jang
 # train CNN model using drama database
 
-. cmd.sh
-. path.sh
 set -e
-affix=drama_6class_melcnn
-#affix=drama_6class_melspec
-#affix=drama_6class_mfccdel
-#affix=drama_6class_spec
-#affix=drama_6class_chroma
-
+affix=drama_6class_melcnn_test
 
 exp_dir=exp/cnn_${affix}
-mdldir=${exp_dir}/1
+mdldir=${exp_dir}/s
 conf=conf/spec_data_melcnn.conf
 class_conf=conf/class_map_for_cnn_mix.conf
-wavdir=/Databases/MusicDetection/MD-test/wav
-textdir=/Databases/MusicDetection/MD-test/annotation
+wavdir=/home2/byjang/MD-test/wav
+textdir=/home2/byjang/MD-test/annotation
 stage=1
 
 [[ ! -d ${exp_dir} ]] && mkdir -p ${exp_dir}
-rm -rf ${mdldir}
-mkdir -p ${mdldir}
+
 cp $conf $exp_dir/train_feat.conf
 
 datadir=data/data_mask_6class
@@ -76,14 +68,26 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
+  rm -rf ${mdldir}
+  mkdir -p ${mdldir}
   cp ${class_conf} ${exp_dir}/
-  python cnn/trainCNN_melcnn.py --num-epoch 500 --minibatch 100 \
+  python cnn/trainCNN_melcnn.py --num-epoch 1 --minibatch 100 \
 				--keep-prob 0.6 --val-iter 100 --save-iter 10000 \
-				--val-rate 1 --shuff-epoch 1 --lr 0.00001 \
+				--val-rate 1 --shuff-epoch 1 --lr 0.0001 \
 				--active-function relu \
-				${exp_dir}/egs/spec_data.npy ${exp_dir}/egs/spec_data.pos ${class_conf} ${mdldir} ${mdldir}/train.log
+				${exp_dir}/egs/spec_data.npy ${exp_dir}/egs/spec_data.pos ${class_conf} ${mdldir} 
 
 fi
 
+if [ $stage -le -2 ]; then
+
+  python cnn/trainCNN_melcnn.py --num-epoch 100 --minibatch 100 \
+				--keep-prob 0.6 --val-iter 100 --save-iter 10000 \
+				--val-rate 1 --shuff-epoch 1 --lr 0.00001 \
+				--active-function relu \
+				--mdl-dir=${exp_dir}/1 \
+				${exp_dir}/egs/spec_data.npy ${exp_dir}/egs/spec_data.pos ${class_conf} ${exp_dir}/2 
+
+fi
 
 

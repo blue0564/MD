@@ -45,7 +45,7 @@ def convert_class_from_list_to_array(lablist, classdict):
 ### End define function ###
 
 def main():
-    usage = "%prog [options] <train-data-file> <train-pos-file> <class-dict-file> <directory-for-save-model>"
+    usage = "%prog [options] <train-data-file> <train-pos-file> <class-dict-file> <directory-for-save-model> <log-file>"
     parser = OptionParser(usage)
 
     # parser.add_option('--input-dim', dest='inDim',
@@ -90,14 +90,7 @@ def main():
                       default='relu', type='string')
 
     (o, args) = parser.parse_args()
-    (datfile, posfile, classfile, expdir) = args
-
-    save_path = expdir + "/mdl"
-    log_path = expdir + "/log"
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-
-    logfile = log_path + "/train.log"
+    (datfile, posfile, classfile, expdir, logfile) = args
 
     ## set the log
     mylogger = logging.getLogger("trainCNN")
@@ -125,10 +118,11 @@ def main():
     mylogger.addHandler(file_handler)
 
     # check the number of input argument
-    if len(args) != 4:
+    if len(args) != 5:
         mylogger.info(parser.print_help())
         sys.exit(1)
 
+    save_path = expdir + "/mdl"
     mini_batch = o.mini_batch
     nepoch = o.num_epoch
     lr = o.lr
@@ -197,10 +191,8 @@ def main():
     # with tf.device('/gpu:0'):
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
-    # sess = tf.InteractiveSession()
+    #sess = tf.InteractiveSession()
 
-    # with tf.device('/cpu:0'):
-    # with tf.device(''):
     # make model #
     # x = tf.placeholder("float", [None, o.inDim], name="x")
     x = tf.placeholder("float",[None,fdim,tdim], name='x')
@@ -214,15 +206,12 @@ def main():
         img_size = numpy.array([fdim,tdim])
 
     with tf.name_scope("Layer_1_Conv_maxpool_dropout") as scope:
-        conv1 = tf.layers.conv2d(inputs=x_img, filters=32, kernel_size=[3, 3],
-                                 padding="SAME", activation=tf.nn.relu, name='conv1')
+        conv1 = tf.layers.conv2d(inputs=x_img, filters=32, kernel_size=[3, tdim],
+                                 padding="SAME", activation=tf.nn.relu)
         pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2,2],
                                         padding="SAME", strides=2)
         dropout1 = tf.layers.dropout(inputs=pool1, rate=keepProb, training=bool_dropout)
         img_size = numpy.ceil(img_size/2.0)
-        # conv1_kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'conv1/kernel')[0]
-        # img_kernel = tf.reshape(conv1_kernel,shape=[32,3,3,1])
-        # tf.summary.image('kernel image',img_kernel,32)
 
     with tf.name_scope("Layer_2_Conv_maxpool_dropout") as scope:
         conv2 = tf.layers.conv2d(inputs=dropout1, filters=64, kernel_size=[3, 3],
@@ -256,21 +245,19 @@ def main():
     with tf.name_scope("SoftMax") as scope:
         out_y_softmax = tf.nn.softmax(out_y,name="out_y_softmax")
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out_y,labels=lab_y),name="ce")
-        tf.summary.scalar('cross entropy', cross_entropy)
 
         #loss_summ = tf.scalar_summary("cross entropy_loss", cost)
 
     train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
-    correct_prediction = tf.equal(tf.argmax(out_y,1),tf.argmax(lab_y,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"), name="acc")
-    tf.summary.scalar('accuracy', accuracy)
 
-    merged = tf.summary.merge_all()
-    train_writer = tf.summary.FileWriter(log_path + '/train',sess.graph)
-    val_writer = tf.summary.FileWriter(log_path + '/val', sess.graph)
     # begin training
+
     init = tf.global_variables_initializer()
     sess.run(init)
+
+    correct_prediction = tf.equal(tf.argmax(out_y,1),tf.argmax(lab_y,1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"), name="acc")
+
 
     if o.premdl != "":
         mylogger.info('LOG : train using pre-model -> %s' %(o.premdl) )
@@ -293,13 +280,12 @@ def main():
         begi = 0
         endi = begi + mini_batch
         for imbatch in xrange(total_batch):
-        #print "train inx : %d - %d\n"%(begi,endi)
+	    #print "train inx : %d - %d\n"%(begi,endi)
             batch_data, batch_lab = array_io.fast_load_array_from_pos_lab_list(datfile,tr_pos_lab_list[begi:endi])
             batch_lab_oh = common_io.dense_to_one_hot_from_range(convert_class_from_list_to_array(batch_lab,class_dict),class_info)
 
             feed_dict = {x: batch_data, lab_y: batch_lab_oh, keepProb: keep_prob, bool_dropout: True}
-            _ = sess.run(train_step, feed_dict)
-
+            sess.run(train_step, feed_dict)
             iter = iter + 1
             begi += mini_batch
             endi = begi + mini_batch
@@ -316,22 +302,16 @@ def main():
                         vendi = val_data.shape[0]
                     ipred_val = sess.run(out_y, feed_dict={x: val_data[vbegi:vendi],
                                                            keepProb: 1.0, bool_dropout: False})
-                    ival_su, ival_ce, ival_acc = sess.run([merged, cross_entropy, accuracy],
-                                                          feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
-                    # ival_ce = sess.run(cross_entropy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
+                    ival_acc = sess.run(accuracy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
+                    ival_ce = sess.run(cross_entropy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
                     val_acc.append(ival_acc)
                     val_ce.append(ival_ce)
-                    val_writer.add_summary(ival_su, (iter+i))
                 val_acc = numpy.mean(numpy.array(val_acc))
                 val_ce = numpy.mean(numpy.array(val_ce))
 
                 pred_tr = sess.run(out_y, feed_dict={x: batch_data, keepProb: 1.0, bool_dropout: False})
-                summary, tr_ce, tr_acc = sess.run([merged, cross_entropy, accuracy], feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
-                # tr_ce = sess.run(cross_entropy, feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
-                # run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-                run_metadata = tf.RunMetadata()
-                train_writer.add_run_metadata(run_metadata, 'step%03d' % iter)
-                train_writer.add_summary(summary, iter)
+                tr_acc = sess.run(accuracy, feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
+                tr_ce = sess.run(cross_entropy, feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
 
                 # set formatter format(time, message)
                 file_handler.setFormatter(formatter)
@@ -342,7 +322,7 @@ def main():
                 if (iter%save_iter==0) | (iter==1): # save parameter
                     saver.save(sess, save_path, global_step=iter, write_meta_graph=False)
 
-    train_writer.close()
+
     saver.save(sess, save_path, global_step=iter, write_meta_graph=False) # last model save
     mylogger.info("### done \n")
 

@@ -3,14 +3,14 @@
 
 set -e
 
-affix=drama_5class_mfccdel
+affix=spec
 
 expdir=exp/cnn_${affix}
 dnnmdl=${expdir}/1
 stage=0
 
-wavdir=/Databases/MusicDetection/MD-test/wav
-textdir=/Databases/MusicDetection/MD-test/annotation
+wavdir=/home2/byjang/corpus/music_speech_detection/test/korean_drama/wav
+textdir=/home2/byjang/corpus/music_speech_detection/test/korean_drama/annotation
 conf=${expdir}/train_feat.conf
 class_conf=${expdir}/class_map_for_cnn_mix.conf
 
@@ -76,9 +76,9 @@ if [ $stage -le 2 ]; then
   [[ ! -d ${decdir} ]] && echo "ERROR: not exist decode directory" && exit 1;
   find ${decdir} -iname "*.npy" | sort > ${decdir}/dec_data.scp
 
-  for ckpt in 140000 700000
+  for ckpt in  10000 20000 30000
   do
-    cat ${decdir}/dec_data.scp | 
+    cat ${decdir}/dec_data.scp | sort | head -n 1 |
     while read datfile
     do
       filename=$(basename $datfile .npy)
@@ -94,7 +94,7 @@ if [ $stage -le 2 ]; then
   done 
 fi
 
-if [ $stage -le 2 ]; then
+if [ $stage -le -3 ]; then
  # ckpt=10000
   ndata=5000
   mdlnum=$(basename $dnnmdl )
@@ -102,9 +102,9 @@ if [ $stage -le 2 ]; then
   find ${decdir} -iname "*.npy" | sort > ${decdir}/dec_data.scp
   mkdir -p $decdir/conv_out
 
-  for ckpt in 1 140000 700000
+  for ckpt in 50000
   do
-    cat ${decdir}/dec_data.scp | 
+    cat ${decdir}/dec_data.scp | sort | head -n 1 | 
     while read datfile
     do
       filename=$(basename $datfile .npy)
@@ -115,9 +115,11 @@ if [ $stage -le 2 ]; then
       convdatafile=$decdir/conv_out/${filename}_mdl${mdlnum}_${ckpt}_convout.dat
       convposfile=$decdir/conv_out/${filename}_mdl${mdlnum}_${ckpt}_convout.pos
       figfile=$decdir/conv_out/${filename}_mdl${mdlnum}_${ckpt}_convout.png
-      rm -f ${convdatafile} ${convdatafile} ${figfile}
+      rm -f ${convdatafile} ${convdatafile}
       echo "Extract CNN conv output"
       python cnn/extract_CNN_conv_output.py --checkpoint=${ckpt} ${datfile} ${posfile} ${dnnmdl} ${convdatafile} ${convposfile} ${logfile}
+
+      rm -f ${figfile}
       echo "Plot t-SNE"
       python cnn/plot_tSNE_from_pos.py --num-data=${ndata} --figure-file=${figfile} ${convdatafile} ${convposfile}
 

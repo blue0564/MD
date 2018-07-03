@@ -24,6 +24,7 @@ from optparse import OptionParser
 
 import numpy
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from deeputils.deepio import array_io
@@ -55,7 +56,7 @@ def slice_mel_scale(inimg_,melinx_,nmel_=0):
 ### End define function ###
 
 def main():
-    usage = "%prog [options] <train-data-file> <train-pos-file> <class-dict-file> <directory-for-save-model> <log-file>"
+    usage = "%prog [options] <train-data-file> <train-pos-file> <class-dict-file> <directory-for-save-model> "
     parser = OptionParser(usage)
 
     # parser.add_option('--input-dim', dest='inDim',
@@ -95,12 +96,22 @@ def main():
     parser.add_option('--mdl-dir', dest='premdl',
                       help='Directory path of pre-model for training',
                       default='', type='string')
+    parser.add_option('--pre-epoch', dest='epoch',
+                      help='epoch of pre-model for training',
+                      default=0, type=int)
     parser.add_option('--active-function', dest='act_func',
                       help='active function relu or sigmoid [default: %default]',
                       default='relu', type='string')
 
     (o, args) = parser.parse_args()
-    (datfile, posfile, classfile, expdir, logfile) = args
+    (datfile, posfile, classfile, expdir) = args
+
+    save_path = expdir + "/mdl"
+    log_path = expdir + "/log"
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+
+    logfile = log_path + "/train.log"
 
     ## set the log
     mylogger = logging.getLogger("trainCNN")
@@ -128,11 +139,10 @@ def main():
     mylogger.addHandler(file_handler)
 
     # check the number of input argument
-    if len(args) != 5:
+    if len(args) != 4:
         mylogger.info(parser.print_help())
         sys.exit(1)
 
-    save_path = expdir + "/mdl"
     mini_batch = o.mini_batch
     nepoch = o.num_epoch
     lr = o.lr
@@ -215,20 +225,38 @@ def main():
         x_img = tf.reshape(x, [-1,fdim,tdim,1])
         img_size = numpy.array([fdim,tdim])
 
-    fft_size = 1025
+    fft_size = 2048
     nmels = 64
-    sr = 8000
+    sr = 16000
+    meltime = 1
     with tf.name_scope("Slice_data") as scope:
-        part_tensor = []
+        # part_tensor = (0 for i in range(nmels))
         part_conv = []
-        melinx, meldim = extract_spec.mel_scale_range(fft_size, sr, nmels)
+        # part_kernel = []
+        # fftrange = numpy.arange(int(fft_size / 2.0 + 1),dtype=int)
+        # kerfilt = numpy.zeros((nmels,int(fft_size/2.0 + 1)),dtype=float)
+        # kerfilt = tf.zeros([nmels, int(fft_size / 2.0 + 1)], tf.float64, name='kerfilt')
+        melinx, meldim, melfilt = extract_spec.mel_scale_range(fft_size, sr, nmels)
         for imel in xrange(nmels):
-            part_tensor.append(slice_mel_scale(x_img,melinx,imel))
-            part_conv.append(tf.layers.conv2d(inputs=part_tensor[imel], filters=1, kernel_size=[meldim[imel],1],
-                                   padding="valid", activation=tf.nn.relu))
+            cname = 'conv_%d' %(imel)
+            # part_tensor[imel] =(slice_mel_scale(x_img,melinx,imel))
+            # init_kernel = tf.constant_initializer(melfilt[imel,melinx[imel]])
+            part_conv.append(tf.layers.conv2d(inputs=slice_mel_scale(x_img,melinx,imel), filters=1, kernel_size=[meldim[imel],meltime],
+                                   kernel_initializer=None,padding="valid", activation=tf.nn.sigmoid, name=cname))
+            part_kernel = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, (cname + '/kernel'))[0]
+
+            # kerfilt[imel,:] = tf.gather(tf.squeeze(part_kernel),fftrange[melinx[imel]])
+            # kerfilt[imel,0] = 1
+            # ifft = fftrange[melinx[imel]]
+            # kerfilt[imel,ifft[0]] = tf.squeeze(part_kernel)[0]
+            # kerfilt[imel,melinx[imel]] = tf.transpose(tf.squeeze(part_kernel))
+
 
         melscale_x = tf.concat(part_conv,1,name="melscale_x")
+
+        # melscale_kernel = tf.concat(part_kernel,0,name='melkernel')
         img_size = numpy.array([nmels,tdim])
+        del part_conv
 
     with tf.name_scope("Layer_1_Conv_maxpool_dropout") as scope:
         conv1 = tf.layers.conv2d(inputs=melscale_x, filters=32, kernel_size=[3, 3],
@@ -270,32 +298,38 @@ def main():
     with tf.name_scope("SoftMax") as scope:
         out_y_softmax = tf.nn.softmax(out_y,name="out_y_softmax")
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out_y,labels=lab_y),name="ce")
-
+        tf.summary.scalar("cross entropy", cross_entropy)
         #loss_summ = tf.scalar_summary("cross entropy_loss", cost)
 
     train_step = tf.train.AdamOptimizer(lr).minimize(cross_entropy)
 
     # begin training
 
-    init = tf.global_variables_initializer()
-    sess.run(init)
-
     correct_prediction = tf.equal(tf.argmax(out_y,1),tf.argmax(lab_y,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"), name="acc")
+    tf.summary.scalar('accuracy', accuracy)
 
+    merged = tf.summary.merge_all()
+    train_writer = tf.summary.FileWriter(log_path + '/train',sess.graph)
+    val_writer = tf.summary.FileWriter(log_path + '/val', sess.graph)
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
     if o.premdl != "":
         mylogger.info('LOG : train using pre-model -> %s' %(o.premdl) )
         graph = tf.get_default_graph()
         saver = tf.train.Saver(max_to_keep=None)
-        saver.restore(sess, tf.train.latest_checkpoint(o.premdl))
+        latest_ckpt = tf.train.latest_checkpoint(o.premdl)
+        print latest_ckpt
+        saver.restore(sess, latest_ckpt)
     else:
         saver = tf.train.Saver(max_to_keep=None)
 
     saver.save(sess, save_path) # save meta-graph
     mylogger.info("LOG : initial model save with meta-graph -> %s" % save_path)
 
-    epoch=0
+    epoch=o.epoch
     iter=0
     while(epoch<nepoch):
         epoch=epoch+1
@@ -327,16 +361,22 @@ def main():
                         vendi = val_data.shape[0]
                     ipred_val = sess.run(out_y, feed_dict={x: val_data[vbegi:vendi],
                                                            keepProb: 1.0, bool_dropout: False})
-                    ival_acc = sess.run(accuracy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
-                    ival_ce = sess.run(cross_entropy, feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
+                    ival_su, ival_ce, ival_acc = sess.run([merged, cross_entropy, accuracy],
+                                                          feed_dict={out_y: ipred_val, lab_y: val_lab_oh[vbegi:vendi]})
                     val_acc.append(ival_acc)
                     val_ce.append(ival_ce)
+                    val_writer.add_summary(ival_su, (iter + i))
+
                 val_acc = numpy.mean(numpy.array(val_acc))
                 val_ce = numpy.mean(numpy.array(val_ce))
 
                 pred_tr = sess.run(out_y, feed_dict={x: batch_data, keepProb: 1.0, bool_dropout: False})
-                tr_acc = sess.run(accuracy, feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
-                tr_ce = sess.run(cross_entropy, feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
+                summary, tr_ce, tr_acc = sess.run([merged, cross_entropy, accuracy],
+                                                  feed_dict={out_y: pred_tr, lab_y: batch_lab_oh})
+                # fig = plt.figure(1)
+                run_metadata = tf.RunMetadata()
+                train_writer.add_run_metadata(run_metadata, 'step%03d' % iter)
+                train_writer.add_summary(summary, iter)
 
                 # set formatter format(time, message)
                 file_handler.setFormatter(formatter)
