@@ -7,7 +7,7 @@ affix=spec
 
 expdir=exp/cnn_${affix}
 dnnmdl=${expdir}/1
-stage=0
+stage=2
 
 wavdir=/home2/byjang/corpus/music_speech_detection/test/korean_drama/wav
 textdir=/home2/byjang/corpus/music_speech_detection/test/korean_drama/annotation
@@ -76,7 +76,7 @@ if [ $stage -le 2 ]; then
   [[ ! -d ${decdir} ]] && echo "ERROR: not exist decode directory" && exit 1;
   find ${decdir} -iname "*.npy" | sort > ${decdir}/dec_data.scp
 
-  for ckpt in  10000 20000 30000
+  for ckpt in  50000
   do
     cat ${decdir}/dec_data.scp | sort | head -n 1 |
     while read datfile
