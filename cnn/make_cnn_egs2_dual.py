@@ -91,8 +91,6 @@ def main():
                       help="processing decode mode (stride=1) ", default=False)
     parser.add_option("-v", "--outvad", action="store_true", dest="outvad",
                       help="output vad result mode", default=False)
-    parser.add_option("-m", "--multivad", action="store_true", dest="multivad",
-                      help="multiple vad mode (need 'wav/path/name.npy'", default=False)
 
     parser.add_option('--feat-type', dest='feat_type', help='type of feature  [default: scispec ]',
                       default='scispec', type='string')
@@ -105,8 +103,6 @@ def main():
     parser.add_option('--fft-size', dest='fft_size', help='fft size [default: frame size ]',
                       default=-1, type='int')
 
-    parser.add_option('--num-melscale', dest='num_melscale', help='number of mel-scale [default: 40 ]',
-                      default=40, type='int')
     parser.add_option('--num-mfcc', dest='num_mfcc', help='number of mfcc [default: 13 ]',
                       default=13, type='int')
 
@@ -130,10 +126,6 @@ def main():
 
     parser.add_option('--target-label', dest='target_label', help='target label  [default: None ]',
                       default='None', type='string')
-    parser.add_option('--sub-label1', dest='sub_label1', help='sub-label1  [default: None ]',
-                      default='None', type='string')
-    parser.add_option('--sub-label2', dest='sub_label2', help='sub-label2  [default: None ]',
-                      default='None', type='string')
     parser.add_option('--rttm-file', dest='rttm_file', help='rttm file for target label',
                       default='', type='string')
 
@@ -150,7 +142,6 @@ def main():
     frame_size_ = np.int(o.frame_size * sr_ * 0.001)
     frame_shift_ = np.int(o.frame_shift * sr_ * 0.001)
     num_mfcc = o.num_mfcc
-    num_melscale = o.num_melscale
     vad_aggressive = o.vad_agg # 0 ~ 3 (least ~ most agrressive)
     vad_frame_size = o.vad_frame_size # only 10 or 20 or 30 (ms)
     vad_min_sil_len = o.vad_min_sil_frames
@@ -174,29 +165,9 @@ def main():
     if log_level > 0:
         print 'LOG: extract spectrogram data'
 
-    if feat_type == 'scispec':
-	print 'extract feature - scipy_spectrogram'
-        sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_, fft_size_)
-    elif feat_type == 'rosamelspec':
-	print 'extract feature - librosa_mel-scale_spectrogram'
-        segment_time, spec_data = extract_spec.mel_spec_librosa(wav_path, sr_, frame_size_, frame_shift_,
-                                                            fft_size_, n_mels_=num_melscale)
-    elif feat_type == 'rosamfcc':
-	print 'extract feature - librosa_mfcc'
-        segment_time, spec_data = extract_spec.mfcc_librosa(wav_path, sr_, frame_size_, frame_shift_,
-                                                                           fft_size_,n_mfcc_=num_mfcc)
-    elif feat_type == 'rosamfccdel':
-	print 'extract feature - librosa_mfcc_del_del2'
-        segment_time, spec_data = extract_spec.mfccdel_librosa(wav_path, sr_, frame_size_, frame_shift_,
-                                                            fft_size_, n_mfcc_=num_mfcc)
-    elif feat_type == 'rosachroma':
-	print 'extract feature - librosa_chromagram'
-        segment_time, spec_data = extract_spec.chroma_spec_librosa(wav_path, sr_, frame_size_, frame_shift_,
-                                                            fft_size_)
-    else:
-	print 'extract feature - default(scipy_spectrogram)'
-        sample_freq, segment_time, spec_data = extract_spec.log_spec_scipy(wav_path, sr_, frame_size_, frame_shift_,
-                                                                           fft_size_)
+    segment_time, spec_data = extract_spec.mel_spec_librosa(wav_path, sr_, frame_size_, frame_shift_,fft_size_)
+    segment_time2, spec_data2 = extract_spec.chroma_spec_librosa(wav_path, sr_, frame_size_, frame_shift_,fft_size_)
+    sample_freq = np.arange(0,spec_data.shape[0],1)
 
     if log_level > 1:
         fig = plt.figure(fignum)
@@ -214,10 +185,13 @@ def main():
     # normalize zero mean
     if o.normal == 'zm':
         spec_data_zm = spec_zm(spec_data)
+        spec_data_zm2 = spec_zm(spec_data2)
     elif o.normal == 'zmuv':
         spec_data_zm = spec_zmuv(spec_data)
+        spec_data_zm2 = spec_zmuv(spec_data2)
     else :
         spec_data_zm = spec_data
+        spec_data_zm2 = spec_data2
 
     if log_level > 1:
         fig = plt.figure(fignum)
@@ -236,18 +210,12 @@ def main():
     if log_level > 0:
         print 'LOG: padding spectrogram data for splicing with edge-mode'
     spec_data_zm_pad = np.pad(spec_data_zm,((0,0),(splice_size,splice_size)),'edge')
+    spec_data_zm_pad2 = np.pad(spec_data_zm2, ((0, 0), (splice_size, splice_size)), 'edge')
 
     # Voice activity detector using 'webrtcvad'
     if log_level > 0:
         print 'LOG: processing vad'
-
-    if o.multivad:
-        vadfile = "%s%s"%(wav_path[0:-3],"npy")
-        vad_index_mu_sp = np.load(vadfile)
-        vad_index = np.sum(vad_index_mu_sp,axis=1)
-        vad_index[(vad_index>1)] = 1
-    else:
-        vad_index, wav_data = vadwav.decision_vad_index(wav_path, vad_aggressive, vad_frame_size, vad_min_sil_len)
+    vad_index, wav_data = vadwav.decision_vad_index(wav_path, vad_aggressive, vad_frame_size, vad_min_sil_len)
     # vad_index, wav_data = vadwav.decision_vad_index_with_statis_model(wav_path,vad_frame_size_=25,
     #                                                                   vad_shift_size_=10, vad_fft_size=512, min_sil_frames=vad_min_sil_len)
 
@@ -282,22 +250,7 @@ def main():
         vadi = vad_index[begi:endi]
         vad_data[i] = (1 if vadwav.is_voice_frame(vadi) else 0)
 
-        # 0 : sil, 1 : music, 2: speech, 3: mixed
-        if o.multivad:
-            vad_music = np.sum(vad_index_mu_sp[begi:endi,0])
-            vad_speech = np.sum(vad_index_mu_sp[begi:endi, 1])
-            threshold = (endi-begi) * 0.7
-            if ((vad_music >= threshold) & (vad_speech >= threshold)):
-                vad_data[i] = 3
-            elif (vad_music >= threshold):
-                vad_data[i] = 1
-            elif (vad_speech >= threshold):
-                vad_data[i] = 2
-            else:
-                vad_data[i] = 0
-
     vad_data_pad = np.pad(vad_data,(splice_size,splice_size),'edge')
-
 
     if log_level > 1:
         fig = plt.figure(fignum)
@@ -337,32 +290,23 @@ def main():
 
         else:
             speci = spec_data_zm_pad[:,begi:endi]
+            speci2 = spec_data_zm_pad2[:, begi:endi]
 
         posi = array_io.save_append_array(spec_file,speci)
+        posi2 = array_io.save_append_array(spec_file, speci2)
 
         target_time = begi * o.frame_shift * 0.001  # because padding
         if o.rttm_file != '': # don't use vad results
             labeli = Time2Class.Search_class(inputTime=target_time,time=time,cla=cla)
-        elif o.multivad:
-            if vad_data_pad[centeri] == 0:
-                labeli = 'sil'
-            elif vad_data_pad[centeri] == 1:
-                labeli = o.sub_label1
-            elif vad_data_pad[centeri] == 2:
-                labeli = o.sub_label2
-            else:
-                labeli = target_label
         else:
             labeli = (target_label if (vad_data_pad[centeri] == 1) else 'sil')
 
         with open(pos_file,'a') as f:
             if o.outvad:
                 # f.write("%i %s %d\n"%(posi, labeli, vad_data_pad[centeri]))
-                f.write("%i %s %d %0.3f\n"%(posi, labeli, vad_data_pad[centeri], target_time))
+                f.write("%i %i %s %d %0.3f\n"%(posi, posi2, labeli, vad_data_pad[centeri], target_time))
             else:
-                f.write("%i %s\n"%(posi,labeli))
-
-
+                f.write("%i %i %s\n"%(posi,posi2,labeli))
 
         begi += spec_stride
         endi = begi + splice_size*2 + 1

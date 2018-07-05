@@ -37,7 +37,11 @@ foreach (@data) {
   @str=split / /,$line;
   $nowStart=$str[3]; $nowDur=$str[4];
   $nowEnd=$str[3] + $str[4];
-  $nowClass=$mapping[$str[7]-1];
+
+  $class=$str[7]-1;
+  if($class>15){ $class=15; }
+  $nowClass=$mapping[$class];
+
   $nowFile=$str[1];
   #print WFILE "$str[0] $nowFile $str[2] $nowStart $nowDur $str[5] $str[6] $nowClass $str[8] $str[9]";
   #print WFILE "preStart: $preStart, preDur: $preDur, preEnd: $preEnd, preClass: $preClass, preFile: $preFile\n";
@@ -56,7 +60,12 @@ foreach (@data) {
   }
  
   #print WFILE "$line";
-  if($start==0){ $preStart=$nowStart; $preDur=$nowDur; $preEnd=$nowEnd; $preFile=$nowFile; $preClass=$nowClass; }
+  if($start==0 && $nowStart>0){
+    print WFILE "$str[0] $nowFile $str[2] 0 $nowStart $str[5] $str[6] $mapping[15] $str[8] $str[9]";
+    $preStart=$nowStart; $preDur=$nowDur; $preEnd=$nowEnd; $preFile=$nowFile; $preClass=$nowClass; 
+  }elsif($start==0 && $nowStart==0){
+    $preStart=$nowStart; $preDur=$nowDur; $preEnd=$nowEnd; $preFile=$nowFile; $preClass=$nowClass;
+  }
 
   $start=1;
 }

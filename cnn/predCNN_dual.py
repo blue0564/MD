@@ -36,7 +36,7 @@ def make_label_with_mixed(prob_):
     return _lab
 
 def main():
-  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+  gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.2)
 
   # sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
   sess = tf.InteractiveSession()
@@ -101,7 +101,6 @@ def main():
   mylogger.info("Start predict cnn")
 
   with tf.device('/cpu:0'):
-  # with tf.device(''):
     # load meta graph and restore weights
     mylogger.info('LOG : load model -> %s' %(mdldir+'/mdl.meta'))
     graph = tf.get_default_graph()
@@ -115,6 +114,7 @@ def main():
     mylogger.info('LOG : checkpoint -> %s ' %(checkpoint))
 
     x = graph.get_tensor_by_name("x:0")
+    x2 = graph.get_tensor_by_name("x2:0")
     lab_y = graph.get_tensor_by_name("lab_y:0")
     out_y_softmax = graph.get_tensor_by_name("SoftMax/out_y_softmax:0")
     keepProb = graph.get_tensor_by_name("keepProb:0")
@@ -142,7 +142,7 @@ def main():
     nclasses = len(class_info)
 
     # mylogger.info("Read data")
-    pos_lab_list = array_io.read_pos_lab_file(posfile)
+    pos_lab_list = array_io.read_dualpos_lab_file(posfile)
     niter = int(len(pos_lab_list)/100) + 1
 
     acclist = []
@@ -153,11 +153,11 @@ def main():
             endi = len(pos_lab_list)
 
         ipos = pos_lab_list[begi:endi]
-        data_, lab_list_ = array_io.fast_load_array_from_pos_lab_list(datfile,ipos)
+        data_,data2_, lab_list_ = array_io.fast_load_array_from_dualpos_lab_list(datfile,ipos)
     # mylogger.info("End of reading data")
 
         ref_lab = convert_class_from_list_to_array(lab_list_, class_dict)
-        pred_prob = sess.run(out_y_softmax,feed_dict={x:data_, keepProb:1.0, bool_dropout: False})
+        pred_prob = sess.run(out_y_softmax,feed_dict={x:data_, x2:data2_, keepProb:1.0, bool_dropout: False})
         #pred_label = make_label_with_mixed(pred_prob)
         pred_label = np.argmax(pred_prob,axis=1)
         iacc = sess.run(accuracy, feed_dict={a: pred_label, b: ref_lab})
